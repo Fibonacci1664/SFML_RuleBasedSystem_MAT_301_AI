@@ -10,6 +10,11 @@
 
 // A GLOBAL!!! 
 bool grid[GRID_SIZE_Y][GRID_SIZE_X] = { false };
+int iterations = 0;
+int totalPopulationCount = 0;
+
+void killHalfPopulation();
+void getTotalPopulation();
 
 /* Rule 1
  * Random Movement
@@ -83,21 +88,138 @@ void grow()
 		{
 			// Calculate the number of neighboring nodes
 			int number_of_neighbours = 0;
+
+			// up
 			if (y > 0 && grid[y - 1][x])
 				number_of_neighbours++;
+
+			// left
 			if (x > 0 && grid[y][x - 1])
 				number_of_neighbours++;
+
+			// right
 			if (x < GRID_SIZE_X - 1 && grid[y][x + 1])
 				number_of_neighbours++;
+
+			// down
 			if (y < GRID_SIZE_Y - 1 && grid[y + 1][x])
 				number_of_neighbours++;
 
+			// uppper left
+			if (y > 0 && x > 0 && grid[y - 1][x - 1])
+				number_of_neighbours++;
+
+			// upper right
+			if (y > 0 && x < GRID_SIZE_X - 1 && grid[y - 1][x + 1])
+				number_of_neighbours++;
+
+			// bottom left
+			if (y < GRID_SIZE_Y - 1 && x > 0 && grid[y + 1][x - 1])
+				number_of_neighbours++;
+
+			// bottom right
+			if (y < GRID_SIZE_Y - 1 && x < GRID_SIZE_X - 1 && grid[y + 1][x + 1])
+				number_of_neighbours++;
+
 			// If we have more than one neighbour
-			if (number_of_neighbours > 1)
+			//if (number_of_neighbours > 1)
+			//{
+			//	// If there is a node at the position, kill it
+			//	// If there is not a node at the position, spawn one
+			//	grid[y][x] = grid[y][x] ? false : true;
+			//}
+
+			// Rules
+			// For a space that is populated:
+			// Each cell with only one or no neighbors dies, as if by solitude.
+			if (grid[y][x] && number_of_neighbours <= 1)
 			{
-				// If there is a node at the position, kill it
-				// If there is not a node at the position, spawn one
-				grid[y][x] = grid[y][x] ? false : true;
+				grid[y][x] = false;
+			}
+
+			// Each cell with four or more neighbors dies, as if by overpopulation.
+			else if (grid[y][x] && number_of_neighbours >= 4)
+			{
+				grid[y][x] = false;
+			}
+
+			// Each cell with two or three neighbors survives.
+			else if (grid[y][x] &&  number_of_neighbours == 2 || number_of_neighbours == 3)
+			{
+				grid[y][x] = true;
+			}
+
+			// For a space that is empty or unpopulated:
+			// Each cell with three neighbors becomes populated.
+			else if (!grid[y][x] && number_of_neighbours == 3)
+			{
+				grid[y][x] = true;
+			}
+		}
+	}
+
+	// Additional rules
+	// Randomly spawn a node every 5 iterations
+	if (iterations % 5 == 0)
+	{
+		int randXPos = rand() % 50;
+		int randYPos = rand() % 50;
+
+		grid[randYPos][randXPos] = true;
+	}
+
+	// Randomly kill a node very 6 iterations
+	if (iterations % 6 == 0)
+	{
+		int randXPos = rand() % 50;
+		int randYPos = rand() % 50;
+
+		grid[randYPos][randXPos] = false;
+	}
+
+	getTotalPopulation();
+
+	// If grid becomes > 53% occupied kill half the entire population
+	if (totalPopulationCount >= 1000)
+	{
+		killHalfPopulation();
+	}
+
+	// Zero the counter ready to check again next loop, once some cells have spawned or died
+	totalPopulationCount = 0;
+}
+
+void getTotalPopulation()
+{
+	// Go through every item in our grid
+	for (int y = 0; y < GRID_SIZE_Y; y++)
+	{
+		for (int x = 0; x < GRID_SIZE_X; x++)
+		{
+			// If the cell is populated
+			if (grid[y][x])
+			{
+				++totalPopulationCount;
+			}
+		}
+	}
+}
+
+void killHalfPopulation()
+{
+	// Go through every item in our grid
+	for (int y = 0; y < GRID_SIZE_Y; y++)
+	{
+		for (int x = 0; x < GRID_SIZE_X; x++)
+		{
+			// If the cell is populated
+			if (grid[y][x])
+			{
+				// 50/50 chance to kill it
+				if (rand() % 2 == 0)
+				{
+					grid[y][x] = false;
+				}
 			}
 		}
 	}
@@ -106,8 +228,9 @@ void grow()
 void run_rules()
 {
 	// Run the rules
-	random_movement();
+	++iterations;
 	grow();
+	//random_movement();	
 }
 
 int main()
@@ -116,6 +239,8 @@ int main()
 	srand((unsigned)std::time(NULL));
 
 	// Create the window and UI bar on the right
+
+	// gridsize = 500 x 500 window
 	const sf::Vector2f gridSize(GRID_SIZE_X*SQUARE_SIZE, GRID_SIZE_Y*SQUARE_SIZE);
 	sf::RenderWindow window(sf::VideoMode((unsigned)(gridSize.x + 100.f), (unsigned)gridSize.y), "SFML_RuleBasedSystem", sf::Style::Close);
 	sf::RectangleShape shape(sf::Vector2f(100.f, gridSize.y));
